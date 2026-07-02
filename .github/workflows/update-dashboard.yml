@@ -1,0 +1,51 @@
+name: 更新数据看板
+
+on:
+  schedule:
+    # 每2小时自动更新一次
+    - cron: '0 */2 * * *'
+  workflow_dispatch:  # 支持手动触发
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 kdocs-cli
+        run: |
+          curl -fsSL "https://wpsai.wpscdn.cn/skillhub/pro/v2.5.16/setup.sh" | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: 配置金山文档Token
+        run: |
+          kdocs-cli auth set-token "${{ secrets.KINGSOFT_DOCS_TOKEN }}"
+
+      - name: 设置Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 生成看板数据
+        run: |
+          python3 generate_dashboard.py
+
+      - name: 上传GitHub Pages产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./output/
+
+      - name: 部署到GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

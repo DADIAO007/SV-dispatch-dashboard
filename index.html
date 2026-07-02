@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SV派单管理系统 - 数据看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#333;padding:0}
+.header{background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;padding:24px 30px}
+.header h1{font-size:26px;margin-bottom:4px}
+.header p{opacity:.85;font-size:14px}
+.header .ts{font-size:12px;opacity:.6;margin-top:6px}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.sc{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.sc .n{font-size:28px;font-weight:700;color:#1a73e8}
+.sc .l{font-size:12px;color:#666;margin-top:4px}
+.sc.gn .n{color:#27ae60}.sc.or .n{color:#e67e22}.sc.pu .n{color:#8e44ad}.sc.te .n{color:#1abc9c}.sc.rd .n{color:#e74c3c}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card h3{font-size:14px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #f0f2f5}
+.card canvas{max-height:260px;width:100%}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f8f9fa;padding:8px 10px;text-align:left;font-weight:600;color:#555;border-bottom:2px solid #e9ecef}
+td{padding:6px 10px;border-bottom:1px solid #f0f2f5;font-size:12px}
+tr:hover{background:#f8f9ff}
+@media(max-width:768px){.g2,.g3{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>SV派单管理系统</h1>
+  <p>数据看板 · 数据来自金山文档SV派单记录表</p>
+  <div class="ts" id="ts"></div>
+</div>
+<div class="container">
+  <div class="stats">
+    <div class="sc"><div class="n">2978</div><div class="l">总记录数</div></div>
+    <div class="sc"><div class="n">2510</div><div class="l">派单记录</div><div style="font-size:11px;color:#999">2026年: 788</div></div>
+    <div class="sc gn"><div class="n">430</div><div class="l">合作客户</div></div>
+    <div class="sc or"><div class="n">69</div><div class="l">巡检任务</div></div>
+    <div class="sc pu"><div class="n">80</div><div class="l">值守任务</div></div>
+    <div class="sc te"><div class="n">319</div><div class="l">通信月结</div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>年度派单趋势</h3><canvas id="c1"></canvas></div>
+    <div class="card"><h3>2026年月度派单</h3><canvas id="c2"></canvas></div>
+  </div>
+  <div class="g3">
+    <div class="card"><h3>TOP10 客户</h3><canvas id="c3"></canvas></div>
+    <div class="card"><h3>服务类型分布</h3><canvas id="c4"></canvas></div>
+    <div class="card"><h3>产品型号排行</h3><canvas id="c5"></canvas></div>
+  </div>
+  <div class="g3">
+    <div class="card"><h3>销售业绩排行</h3><canvas id="c6"></canvas></div>
+    <div class="card"><h3>任务状态分布</h3><canvas id="c7"></canvas></div>
+    <div class="card"><h3>最近10条派单</h3>
+      <table><thead><tr><th>客户</th><th>服务</th><th>型号</th><th>日期</th><th>销售</th></tr></thead>
+      <tbody><tr><td><b>平安理财</b></td><td>硬件安装</td><td>CS5280H3</td><td>20260706</td><td>张洋洋</td></tr><tr><td><b>招商银行</b></td><td>人天</td><td>CS5280H3</td><td>-</td><td>张洋洋</td></tr><tr><td><b>天翼云</b></td><td>特殊支持</td><td>CS5466H3</td><td>20260702</td><td>徐哲</td></tr><tr><td><b>国网安徽</b></td><td>硬件安装</td><td>CS5280H3</td><td>-</td><td>王杨昆</td></tr><tr><td><b>国网安徽</b></td><td>硬件安装</td><td>CS5280H2</td><td>-</td><td>王杨昆</td></tr><tr><td><b>四川银行</b></td><td>硬件安装</td><td>CS5280H3</td><td>20260701</td><td>杨世伦</td></tr><tr><td><b>安徽移动</b></td><td>操作系统+集成化交付</td><td>CS5280H3</td><td>20260626</td><td>周光如</td></tr><tr><td><b>天翼云</b></td><td>特殊支持</td><td>CS5998H3</td><td>20260701</td><td>徐哲</td></tr><tr><td><b>齐鲁创新院</b></td><td>通信月结</td><td>PPU</td><td>20260701</td><td>王鹏飞</td></tr><tr><td><b>四川移动</b></td><td>通信月结</td><td>CS5280H3</td><td>20260630</td><td>王桐</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+<script>
+var D = {"yearly": [{"year": 2024, "c": 480}, {"year": 2025, "c": 1242}, {"year": 2026, "c": 788}], "monthly": [{"m": "202512", "c": 9}, {"m": "202601", "c": 150}, {"m": "202602", "c": 64}, {"m": "202603", "c": 109}, {"m": "202604", "c": 108}, {"m": "202605", "c": 172}, {"m": "202606", "c": 154}, {"m": "202607", "c": 5}], "ctop": [{"customer_name": "平安科技", "c": 573, "q": 2882}, {"customer_name": "南网", "c": 97, "q": 1317}, {"customer_name": "中石化", "c": 79, "q": 801}, {"customer_name": "国家电网", "c": 64, "q": 1743}, {"customer_name": "湖北移动", "c": 44, "q": 508}, {"customer_name": "中行江苏", "c": 37, "q": 3803}, {"customer_name": "南方电网", "c": 34, "q": 422}, {"customer_name": "招商银行", "c": 30, "q": 4115}, {"customer_name": "贵州联通", "c": 28, "q": 162}, {"customer_name": "平安银行-观澜机房", "c": 27, "q": 523}], "srv": [{"service_type": "硬件安装", "c": 952}, {"service_type": "集成化交付", "c": 425}, {"service_type": "操作系统+集成化交付", "c": 234}, {"service_type": "通信月结", "c": 163}, {"service_type": "特殊支持", "c": 157}, {"service_type": "硬件安装服务", "c": 109}, {"service_type": "人天结算", "c": 59}, {"service_type": "软硬件集中部署服务", "c": 51}, {"service_type": "集成化交付服务", "c": 42}, {"service_type": "集成化交付+操作系统安装", "c": 31}, {"service_type": "硬件\\操作系统", "c": 25}, {"service_type": "PC硬件安装服务", "c": 23}, {"service_type": "PC硬件/PC软硬件", "c": 22}, {"service_type": "集成化交付+操作系统安装+安全加固", "c": 20}, {"service_type": "人天服务", "c": 20}], "sales": [{"sales_person": "杨艺敏", "c": 588}, {"sales_person": "张洋洋", "c": 167}, {"sales_person": "王杨昆", "c": 95}, {"sales_person": "苗培杰", "c": 80}, {"sales_person": "田新苗", "c": 54}, {"sales_person": "郝健", "c": 51}, {"sales_person": "林博文", "c": 49}, {"sales_person": "王星星", "c": 45}, {"sales_person": "李春烨", "c": 37}, {"sales_person": "刘乐文", "c": 32}], "prod": [{"product_model": "CS5280H2", "c": 1037, "q": 22634}, {"product_model": "CS5280H3", "c": 677, "q": 11718}, {"product_model": "PPU", "c": 107, "q": 904}, {"product_model": "CS5280K2", "c": 99, "q": 30018}, {"product_model": "CE520F", "c": 86, "q": 6001}, {"product_model": "CS5420H2", "c": 61, "q": 2521}, {"product_model": "CS8260F3", "c": 59, "q": 795}, {"product_model": "CS5260H2", "c": 59, "q": 2000}, {"product_model": "NF5468H7", "c": 43, "q": 261}, {"product_model": "CS5280F3", "c": 35, "q": 123}, {"product_model": "CS5260H3", "c": 29, "q": 343}, {"product_model": "CE720Z", "c": 14, "q": 1043}], "stat": [{"s": "待处理", "c": 788}, {"s": "结单", "c": 62}, {"s": "巡检中", "c": 61}, {"s": "取消", "c": 2}]};
+var C = ['#1a73e8','#e67e22','#27ae60','#8e44ad','#e74c3c','#1abc9c','#f39c12','#2ecc71','#9b59b6','#e91e63','#00bcd4','#ff5722'];
+document.getElementById('ts').textContent = '生成时间: '+new Date().toLocaleString('zh-CN');
+function ci(id,t,lbs,vals,bg){new Chart(document.getElementById(id),{type:t,data:{labels:lbs,datasets:[{data:vals,backgroundColor:bg||'rgba(26,115,232,0.7)',borderColor:'#1a73e8',borderWidth:t==='line'?2:0,borderRadius:4,tension:.3}]},options:{responsive:true,plugins:{legend:{display:t==='doughnut'}},scales:{y:{beginAtZero:true,grid:{color:'#eee'}},x:{grid:{display:false}}}}})}
+ci('c1','bar',D.yearly.map(function(i){return i.year}),D.yearly.map(function(i){return i.c}));
+ci('c2','line',D.monthly.map(function(i){return (i.m||'').slice(-2)+'月'}),D.monthly.map(function(i){return i.c}));
+ci('c3','bar',D.ctop.map(function(i){return i.customer_name.length>5?i.customer_name.slice(0,5)+'..':i.customer_name}),D.ctop.map(function(i){return i.c}),C);
+ci('c4','doughnut',D.srv.map(function(i){return i.service_type}),D.srv.map(function(i){return i.c}),C);
+ci('c5','bar',D.prod.map(function(i){return i.product_model.length>8?i.product_model.slice(0,8)+'..':i.product_model}),D.prod.map(function(i){return i.c}),C);
+ci('c6','bar',D.sales.map(function(i){return i.sales_person}),D.sales.map(function(i){return i.c}),C);
+ci('c7','doughnut',D.stat.map(function(i){return i.s}),D.stat.map(function(i){return i.c}),C);
+</script>
+</body>
+</html>
