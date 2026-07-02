@@ -1,0 +1,43 @@
+name: 邮件监控
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 kdocs-cli
+        run: |
+          curl -fsSL "https://wpsai.wpscdn.cn/skillhub/pro/v2.5.16/releases/kdocs-cli-2.5.16-linux-amd64.tar.gz" -o /tmp/kdocs.tar.gz
+          tar xzf /tmp/kdocs.tar.gz -C /usr/local/bin/
+          chmod +x /usr/local/bin/kdocs-cli
+          /usr/local/bin/kdocs-cli version
+
+      - name: 配置 kdocs Token
+        run: /usr/local/bin/kdocs-cli auth set-token "${{ secrets.KINGSOFT_DOCS_TOKEN }}"
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 检查邮件并登记
+        env:
+          FOXMAIL_PASS: ${{ secrets.FOXMAIL_PASS }}
+        run: python3 email_check.py
+
+      - name: 提交状态和日志
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add email_state.json email_log.json 2>/dev/null || true
+          git commit -m "邮件监控状态更新 $(date -u '+%Y-%m-%d %H:%M')" || echo "No changes"
+          git push
