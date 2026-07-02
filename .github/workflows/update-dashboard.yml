@@ -29,24 +29,18 @@ jobs:
       - name: 安装 kdocs-cli
         run: |
           curl -fsSL "https://wpsai.wpscdn.cn/skillhub/pro/v2.5.16/releases/kdocs-cli-2.5.16-linux-amd64.tar.gz" -o /tmp/kdocs.tar.gz
-          tar xzf /tmp/kdocs.tar.gz -C /tmp
-          mkdir -p ~/.local/bin
-          cp /tmp/kdocs-cli-2.5.16-linux-amd64/kdocs-cli ~/.local/bin/
-          chmod +x ~/.local/bin/kdocs-cli
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          ~/.local/bin/kdocs-cli version
+          tar xzf /tmp/kdocs.tar.gz -C /usr/local/bin/
+          chmod +x /usr/local/bin/kdocs-cli
+          /usr/local/bin/kdocs-cli version
 
       - name: 配置金山文档Token
         run: |
-          ~/.local/bin/kdocs-cli auth set-token "${{ secrets.KINGSOFT_DOCS_TOKEN }}"
+          /usr/local/bin/kdocs-cli auth set-token "${{ secrets.KINGSOFT_DOCS_TOKEN }}"
 
       - name: 设置Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: 安装依赖
-        run: pip install --quiet requests
 
       - name: 生成看板
         run: python3 generate_dashboard.py
