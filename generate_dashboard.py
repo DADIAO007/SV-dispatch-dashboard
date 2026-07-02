@@ -99,11 +99,13 @@ def read_all_sheets():
             all_dispatch.append(vals)
     
     for r, row in rows2024.items():
-        vals = {0: row.get(0,''), 1: row.get(1,''), 5: row.get(5,''), 7: row.get(7,''),
-                8: row.get(8,''), 9: row.get(9,''), 10: row.get(10,''), 11: row.get(11,''),
-                12: row.get(12,''), 13: row.get(13,''), 15: row.get(15,''), 16: row.get(16,''),
-                17: row.get(17,'')}
-        vals['service_type'] = row.get(8,'')
+        # 2024布局: 0序号 1客户 2地址 3联系人 4电话 5产品类别 6任务来源 7单号 8服务 9产品型号 10数量
+        # 11服务内容 12实施编号 13销售 14销售电话 15状态 16开始时间 17预计结束 18实际结束 19实施经理 20电话 21备注
+        vals = {0: row.get(0,''), 1: row.get(1,''), 5: row.get(7,''),
+                6: row.get(8,''), 7: row.get(9,''), 8: row.get(10,''), 9: row.get(11,''),
+                10: row.get(12,''), 11: row.get(13,''), 12: row.get(14,''),
+                13: row.get(16,''), 14: row.get(17,''), 15: row.get(15,''),
+                20: row.get(5,''), 21: row.get(6,'')}
         if vals[1]:
             vals['year'] = 2024
             all_dispatch.append(vals)
@@ -183,16 +185,20 @@ def read_all_sheets():
         status_count[s] = status_count.get(s, 0) + 1
     status_data = [{'name': n, 'count': status_count[n]} for n in sorted(status_count.keys(), key=lambda x: -status_count[x])]
     
-    # 最近10条
+    # 最近10条 (仅2026年，按开始时间倒序)
+    recent_2026 = []
+    for r, row in rows2026.items():
+        start_d = row.get(13, '')
+        if start_d and len(start_d) >= 8 and start_d.isdigit():
+            recent_2026.append((start_d, r, row))
+    recent_2026.sort(key=lambda x: -int(x[0]))
+    
     recent = []
-    for d in sorted(all_dispatch, key=lambda x: -(int(x.get(13, '0') or '0') if x.get(13,'') else 0)):
-        if d.get('year') == 2026:
-            recent.append({
-                'customer': d[1], 'order': d.get(5,''), 'service': d.get(6,''),
-                'model': d.get(7,''), 'date': d.get(13,''), 'sales': d.get(11,'')
-            })
-            if len(recent) >= 10:
-                break
+    for _, r, row in recent_2026[:10]:
+        recent.append({
+            'customer': row.get(1,''), 'order': row.get(5,''), 'service': row.get(6,''),
+            'model': row.get(7,''), 'date': row.get(13,''), 'sales': row.get(11,'')
+        })
     
     return {
         'stats': {
