@@ -51,7 +51,7 @@ def normalize_records(rows, year, layout):
 
 def read_all_data():
     print("读取数据中...")
-    rows26 = to_rows(read_sheet(27, 800, 18))
+    rows26 = to_rows(read_sheet(27, 1000, 18))
     rows25 = to_rows(read_sheet(25, 1500, 22))
     rows24 = to_rows(read_sheet(1, 600, 22))
     rows_insp = to_rows(read_sheet(28, 200, 17))
