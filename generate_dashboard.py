@@ -155,6 +155,9 @@ def read_all_data():
     all_records.extend(duty)
     all_records.extend(ms)
 
+    # 按开始日期倒序，最新在前
+    all_records.sort(key=lambda r: r.get('sd',''), reverse=True)
+
     # 返回两部分：统计（嵌入HTML）+ 明细（单独JSON）
     stats = {
         'stats':{'grand_total':total_disp+len(insp)+len(duty)+len(ms),
