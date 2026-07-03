@@ -336,11 +336,19 @@ tr:hover{background:#f8f9ff}
 // 密码验证
 var PW='SV2026';
 function checkPw(){
-  if(document.getElementById('pwInput').value===PW){
-    document.getElementById('pwGate').style.display='none';
-    document.getElementById('mainApp').style.display='block';
-  }else{
-    document.getElementById('pwErr').style.display='block';
+  try{
+    var v=document.getElementById('pwInput').value;
+    if(v===PW){
+      document.getElementById('pwGate').style.display='none';
+      document.getElementById('mainApp').style.display='block';
+      setTimeout(initCharts,200);
+    }else{
+      var err=document.getElementById('pwErr');
+      err.style.display='block';
+      err.textContent='密码错误';
+    }
+  }catch(e){
+    alert('错误: '+e.message);
   }
 }
 
@@ -348,15 +356,19 @@ function checkPw(){
 var S = ''' + stats_json + ''';
 var C=['#1a73e8','#e67e22','#27ae60','#8e44ad','#e74c3c','#1abc9c','#f39c12','#2ecc71','#9b59b6','#e91e63','#00bcd4','#ff5722'];
 
-// 图表初始化
-function ci(id,t,lbs,vals,bg){new Chart(document.getElementById(id),{type:t,data:{labels:lbs,datasets:[{data:vals,backgroundColor:bg||'rgba(26,115,232,0.7)',borderColor:'#1a73e8',borderWidth:t==='line'?2:0,borderRadius:4,tension:.3}]},options:{responsive:true,plugins:{legend:{display:t==='doughnut'}},scales:{y:{beginAtZero:true,grid:{color:'#eee'}},x:{grid:{display:false}}}}})}
-ci('c1','bar',S.yearly.map(function(i){return i.year}),S.yearly.map(function(i){return i.count}));
-ci('c2','line',S.monthly.map(function(i){return(i.month||'').slice(-2)+'月'}),S.monthly.map(function(i){return i.count}));
-ci('c3','bar',S.ctop.map(function(i){return i.name.length>5?i.name.slice(0,5)+'..':i.name}),S.ctop.map(function(i){return i.count}),C);
-ci('c4','doughnut',S.srv.map(function(i){return i.name}),S.srv.map(function(i){return i.count}),C);
-ci('c5','bar',S.prod.map(function(i){return i.name.length>8?i.name.slice(0,8)+'..':i.name}),S.prod.map(function(i){return i.count}),C);
-ci('c6','bar',S.sales.map(function(i){return i.name}),S.sales.map(function(i){return i.count}),C);
-ci('c7','doughnut',S.status.map(function(i){return i.name}),S.status.map(function(i){return i.count}),C);
+// 图表初始化（密码验证通过后才调用）
+var chartsInited=false;
+function ci(id,t,lbs,vals,bg){try{new Chart(document.getElementById(id),{type:t,data:{labels:lbs,datasets:[{data:vals,backgroundColor:bg||'rgba(26,115,232,0.7)',borderColor:'#1a73e8',borderWidth:t==='line'?2:0,borderRadius:4,tension:.3}]},options:{responsive:true,plugins:{legend:{display:t==='doughnut'}},scales:{y:{beginAtZero:true,grid:{color:'#eee'}},x:{grid:{display:false}}}}})}catch(e){console.log('Chart error:',id,e)}}
+function initCharts(){
+  if(chartsInited) return; chartsInited=true;
+  ci('c1','bar',S.yearly.map(function(i){return i.year}),S.yearly.map(function(i){return i.count}));
+  ci('c2','line',S.monthly.map(function(i){return(i.month||'').slice(-2)+'月'}),S.monthly.map(function(i){return i.count}));
+  ci('c3','bar',S.ctop.map(function(i){return i.name.length>5?i.name.slice(0,5)+'..':i.name}),S.ctop.map(function(i){return i.count}),C);
+  ci('c4','doughnut',S.srv.map(function(i){return i.name}),S.srv.map(function(i){return i.count}),C);
+  ci('c5','bar',S.prod.map(function(i){return i.name.length>8?i.name.slice(0,8)+'..':i.name}),S.prod.map(function(i){return i.count}),C);
+  ci('c6','bar',S.sales.map(function(i){return i.name}),S.sales.map(function(i){return i.count}),C);
+  ci('c7','doughnut',S.status.map(function(i){return i.name}),S.status.map(function(i){return i.count}),C);
+}
 
 // 明细数据（异步加载）
 var RECORDS=null, filtered=[], PER_PAGE=50, currentPage=1, searchTimer=null;
