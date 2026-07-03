@@ -155,51 +155,64 @@ def parse_dispatch(subject, body):
     return dispatch
 
 def kdocs_add_row(dispatch):
-    """通过 kdocs-cli 追加一行到金山文档表格"""
+    """通过 kdocs-cli 更新表格 - 先查末行位置，再用 update-range-data 写入"""
     env = {**os.environ, 'PATH': os.environ.get('PATH', '') + ':' + os.path.expanduser('~/.local/bin')}
     
-    # 构建行数据 - 2026派单记录的列顺序
-    # 0:序号 1:客户名称 2:详细地址 3:联系人 4:联系方式 5:单号 6:服务 7:产品型号
-    # 8:数量 9:服务内容 10:实施编号 11:销售 12:联系方式 13:开始时间 14:预计结束时间
-    # 15:备注 16:产品类别 17:任务来源
+    # 步骤1：查末行位置（查 790-1200 范围找最后一个非空行）
+    r = subprocess.run(['kdocs-cli', 'sheet', 'get-range-data', json.dumps({
+        'file_id': FILE_ID, 'worksheet_id': WORKSHEET_ID,
+        'range': {'rowFrom': 790, 'rowTo': 1200, 'colFrom': 0, 'colTo': 1}
+    })], capture_output=True, text=True, env=env, timeout=15)
     
-    row_data = [
-        "",  # 序号(自动)
-        dispatch.get('customer', ''),
-        dispatch.get('address', ''),
-        dispatch.get('contact', ''),
-        dispatch.get('phone', ''),
-        dispatch.get('order_no', ''),
-        dispatch.get('service_type', ''),
-        dispatch.get('product_model', ''),
-        dispatch.get('quantity', ''),
-        dispatch.get('service_content', ''),
-        "",  # 实施编号
-        dispatch.get('sales', ''),
-        "",  # 销售联系方式
-        dispatch.get('start_date', ''),
-        "",  # 预计结束时间
-        "",  # 备注
-        "CX-SV",  # 产品类别
-        "CRM",  # 任务来源
+    if r.returncode != 0:
+        return False, f"查询末行失败: {r.stderr}"
+    
+    try:
+        cells = json.loads(r.stdout)['data']['detail']['rangeData']
+    except:
+        return False, f"解析失败: {r.stdout[:100]}"
+    
+    last_row = 798
+    for c in cells:
+        if c.get('cellText', ''):
+            last_row = max(last_row, c['rowFrom'])
+    
+    write_row = last_row + 1
+    print(f"   末行={last_row}, 写入行={write_row}")
+    
+    # 步骤2：构建 update-range-data 请求
+    vals = [
+        '', dispatch.get('customer', ''), dispatch.get('address', ''),
+        dispatch.get('contact', ''), dispatch.get('phone', ''),
+        dispatch.get('order_no', ''), dispatch.get('service_type', ''),
+        dispatch.get('product_model', ''), dispatch.get('quantity', ''),
+        dispatch.get('service_content', ''), '',
+        dispatch.get('sales', ''), '', dispatch.get('start_date', ''),
+        '', '', 'CX-SV', 'CRM'
     ]
     
+    rangeData = []
+    for i, v in enumerate(vals):
+        if v:
+            rangeData.append({
+                'opType': 'formula',
+                'rowFrom': write_row, 'rowTo': write_row,
+                'colFrom': i, 'colTo': i, 'formula': v
+            })
+    
     payload = {
-        'file_id': FILE_ID,
-        'worksheet_id': WORKSHEET_ID,
-        'row_data': row_data
+        'file_id': FILE_ID, 'worksheet_id': WORKSHEET_ID,
+        'rangeData': rangeData
     }
     
-    payload_file = '/tmp/kdocs_payload.json'
+    payload_file = '/tmp/kdocs_write.json'
     with open(payload_file, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False)
     
-    result = subprocess.run(
-        ['kdocs-cli', 'sheet', 'add-row', '--file', payload_file, '--silent'],
-        capture_output=True, text=True, env=env, timeout=30
-    )
+    r = subprocess.run(['kdocs-cli', 'sheet', 'update-range-data', '--file', payload_file],
+                       capture_output=True, text=True, env=env, timeout=30)
     
-    return result.returncode == 0, result.stdout + result.stderr
+    return r.returncode == 0, r.stdout[:200]
 
 def load_state():
     if os.path.exists(STATE_FILE):
