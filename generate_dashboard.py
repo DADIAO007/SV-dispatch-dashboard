@@ -192,7 +192,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 #pwGate input{padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;width:100%;text-align:center;outline:none}
 #pwGate input:focus{border-color:#1a73e8}
 #pwGate button{margin-top:12px;padding:10px 30px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer}
-#pwGate .err{color:#e74c3c;font-size:12px;margin-top:8px;display:none}
 .header{background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;padding:20px 30px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .header h1{font-size:24px}.header p{opacity:.85;font-size:13px}
 .nav-tabs{display:flex;gap:4px}
@@ -229,13 +228,28 @@ tr:hover{background:#f8f9ff}
 </style>
 </head>
 <body>
+<script>
+(function(){
+  var P='SV2026';
+  window.go=function(){
+    if(document.getElementById('pi').value===P){
+      document.getElementById('pwGate').style.display='none';
+      document.getElementById('mainApp').style.display='block';
+      var s=document.createElement('script');s.src='https://lib.baomitu.com/Chart.js/4.4.1/chart.umd.min.js';
+      s.onload=function(){if(window.initCharts)initCharts()};document.head.appendChild(s);
+    }else{
+      document.getElementById('pe').style.display='block';
+    }
+  };
+})();
+</script>
 <div id="pwGate">
   <div>
     <h2>🔒 SV派单管理系统</h2>
     <p>请输入访问密码</p>
-    <input type="password" id="pwInput" placeholder="输入密码..." onkeydown="if(event.key==='Enter')checkPw()">
-    <br><button onclick="checkPw()">进入系统</button>
-    <div class="err" id="pwErr">密码错误</div>
+    <input type="password" id="pi" placeholder="输入密码..." onkeydown="if(event.key==='Enter')go()">
+    <br><button onclick="go()">进入系统</button>
+    <div class="err" id="pe" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none">密码错误</div>
   </div>
 </div>
 <div id="mainApp" style="display:none">
@@ -332,32 +346,6 @@ tr:hover{background:#f8f9ff}
 </div>
 
 <script>
-// 密码验证
-var PW='SV2026';
-function checkPw(){
-  try{
-    var v=document.getElementById('pwInput').value;
-    if(v===PW){
-      document.getElementById('pwGate').style.display='none';
-      document.getElementById('mainApp').style.display='block';
-      // 动态加载Chart.js
-      if(!document.getElementById('chartjs')){
-        var s=document.createElement('script');
-        s.id='chartjs';
-        s.src='https://lib.baomitu.com/Chart.js/4.4.1/chart.umd.min.js';
-        s.onload=function(){setTimeout(initCharts,100)};
-        document.head.appendChild(s);
-      }else{setTimeout(initCharts,100);}
-    }else{
-      var err=document.getElementById('pwErr');
-      err.style.display='block';
-      err.textContent='密码错误';
-    }
-  }catch(e){
-    alert('错误: '+e.message);
-  }
-}
-
 // 统计数据（内嵌，体积小）
 var S = ''' + stats_json + ''';
 var C=['#1a73e8','#e67e22','#27ae60','#8e44ad','#e74c3c','#1abc9c','#f39c12','#2ecc71','#9b59b6','#e91e63','#00bcd4','#ff5722'];
