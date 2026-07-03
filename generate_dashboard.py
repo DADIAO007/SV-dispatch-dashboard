@@ -183,10 +183,17 @@ def generate_html(stats):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SV派单管理系统 - 数据看板</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://lib.baomitu.com/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#333}
+#pwGate{position:fixed;top:0;left:0;width:100%;height:100%;background:#1a73e8;display:flex;align-items:center;justify-content:center;z-index:9999}
+#pwGate>div{background:#fff;padding:36px;border-radius:16px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.3);max-width:360px;width:90%}
+#pwGate h2{font-size:20px;margin-bottom:6px}#pwGate p{color:#999;font-size:13px;margin-bottom:16px}
+#pwGate input{padding:10px;border:2px solid #ddd;border-radius:8px;font-size:15px;width:100%;text-align:center;outline:none}
+#pwGate input:focus{border-color:#1a73e8}
+#pwGate button{margin-top:12px;padding:10px 30px;background:#1a73e8;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer}
+#pwGate .err{color:#e74c3c;font-size:12px;margin-top:8px;display:none}
 .header{background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;padding:20px 30px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .header h1{font-size:24px}.header p{opacity:.85;font-size:13px}
 .nav-tabs{display:flex;gap:4px}
@@ -223,6 +230,19 @@ tr:hover{background:#f8f9ff}
 </style>
 </head>
 <body>
+<div id="pwGate">
+  <div>
+    <h2>🔒 SV派单管理系统</h2>
+    <p>请输入访问密码</p>
+    <input type="password" id="pwInput" placeholder="输入密码..." onkeydown="if(event.key==='Enter')checkPw()">
+    <br><button onclick="checkPw()">进入系统</button>
+    <div class="err" id="pwErr">密码错误</div>
+  </div>
+</div>
+<div id="mainApp" style="display:none">
+
+
+
 <div class="header">
   <div><h1>📊 SV派单管理系统</h1><p>数据看板 · 自动同步</p></div>
   <div class="nav-tabs">
@@ -313,6 +333,17 @@ tr:hover{background:#f8f9ff}
 </div>
 
 <script>
+// 密码验证
+var PW='SV2026';
+function checkPw(){
+  if(document.getElementById('pwInput').value===PW){
+    document.getElementById('pwGate').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+  }else{
+    document.getElementById('pwErr').style.display='block';
+  }
+}
+
 // 统计数据（内嵌，体积小）
 var S = ''' + stats_json + ''';
 var C=['#1a73e8','#e67e22','#27ae60','#8e44ad','#e74c3c','#1abc9c','#f39c12','#2ecc71','#9b59b6','#e91e63','#00bcd4','#ff5722'];
@@ -483,58 +514,17 @@ function submitForm(){
   var payload={action:EDIT_MODE,data:data};
   if(EDIT_MODE==='edit'){
     var idx=parseInt(document.getElementById('ef_edit_idx').value);
-    if(idx>=0 && idx<filtered.length){
-      payload.original_order_no=filtered[idx].o||'';
-    }
+    if(idx>=0&&idx<filtered.length){payload.original_order_no=filtered[idx].o||'';}
   }
   
-  // 立即在页面中显示（localStorage暂存）
-  var local=JSON.parse(localStorage.getItem('sv_edits')||'[]');
-  local.push({ts:new Date().toISOString(),action:EDIT_MODE,data:data});
-  localStorage.setItem('sv_edits',JSON.stringify(local.slice(-50)));
-  
-  // 添加到内存中的 RECORDS 数组（客户端即时显示）
-  if(EDIT_MODE==='add'){
-    RECORDS.unshift({t:'派单',y:2026,c:data.customer,a:data.address,ct:data.contact,ph:data.phone,
-      o:data.order_no,sv:data.service,pm:data.product,q:data.qty,cn:data.content,
-      in:'',sl:data.sales,sd:data.start_date,ed:'',st:'待同步',rm:data.remark,
-      pc:data.pcat,sr:data.source,_local:true});
-  }else{
-    var idx=parseInt(document.getElementById('ef_edit_idx').value);
-    if(idx>=0 && idx<filtered.length){
-      var r=filtered[idx];
-      r.c=data.customer;r.a=data.address;r.ct=data.contact;r.ph=data.phone;
-      r.o=data.order_no;r.sv=data.service;r.pm=data.product;r.q=data.qty;
-      r.cn=data.content;r.sl=data.sales;r.sd=data.start_date;r.rm=data.remark;
-      r._local=true;
-    }
-  }
-  
-  // 生成 GitHub Issue 链接
   var title=encodeURIComponent('数据编辑:'+(EDIT_MODE==='add'?'新增':'编辑')+':'+data.customer);
-  var body=encodeURIComponent('```json\n'+JSON.stringify(payload,null,2)+'\n```\n\n> 自动提交，请确认后点击 Submit new issue');
+  var body=encodeURIComponent('```json\n'+JSON.stringify(payload,null,2)+'\n```\n\n> 请直接点击 Submit new issue 提交');
   var url='https://github.com/DADIAO007/SV-dispatch-dashboard/issues/new?title='+title+'&body='+body;
   
-  document.getElementById('formMsg').innerHTML='✅ 页面已更新！<br><a href="'+url+'" target="_blank" style="color:#1a73e8;font-weight:600">👉 点击此处打开 GitHub Issue 确认提交</a><br><span style="color:#999;font-size:11px">提交Issue后，数据将自动同步到WPS表格，2分钟内看板刷新</span>';
-  
-  doFilter();
+  document.getElementById('formMsg').innerHTML='<a href="'+url+'" target="_blank" style="color:#1a73e8;font-weight:600">👉 点击此处打开 GitHub Issue 确认提交</a><br><span style="color:#999;font-size:11px">提交后2分钟内自动同步到看板</span>';
 }
-
-// 页面加载时合并 localStorage 中的暂存数据
-if(RECORDS){
-  var pending=JSON.parse(localStorage.getItem('sv_edits')||'[]');
-  if(pending.length>0){
-    console.log('有 '+pending.length+' 条待同步记录');
-  }
-}
-
-window.addEventListener('load',function(){
-  // 关闭弹窗的点击外部
-  document.getElementById('editModal').addEventListener('click',function(e){
-    if(e.target===this) closeForm();
-  });
-});
 </script>
+</div>
 </body>
 </html>'''
 
