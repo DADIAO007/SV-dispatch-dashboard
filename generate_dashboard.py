@@ -264,7 +264,7 @@ tr:hover{background:#f8f9ff}
     <div class="toolbar">
       <select id="filterYear" onchange="doFilter()">
         <option value="all">全部年份</option>
-        <option value="2026">2026年</option>
+        <option value="2026" selected>2026年</option>
         <option value="2025">2025年</option>
         <option value="2024">2024年</option>
       </select>
@@ -277,10 +277,38 @@ tr:hover{background:#f8f9ff}
       </select>
       <input type="text" id="searchInput" placeholder="搜索：客户/单号/产品/服务/销售..." oninput="debounceSearch()">
       <span class="info" id="recordInfo"></span>
+      <button onclick="openForm()" style="margin-left:auto;padding:8px 18px;background:#1a73e8;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">＋ 新增记录</button>
     </div>
     <div style="overflow-x:auto" id="tableContainer"><div class="loading">加载数据中...</div></div>
     <div class="pagination" id="pagination"></div>
   </div>
+</div>
+</div>
+
+<!-- 新增/编辑弹窗 -->
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto">
+<div style="background:#fff;max-width:700px;margin:30px auto;border-radius:12px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+<h3 id="modalTitle" style="margin-bottom:16px;font-size:16px">新增记录</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div><label style="font-size:12px;color:#666">客户名称 *</label><input id="ef_customer" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">单号</label><input id="ef_order_no" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">联系人</label><input id="ef_contact" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">电话</label><input id="ef_phone" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">地址</label><input id="ef_address" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">服务类型</label><input id="ef_service" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">产品型号</label><input id="ef_product" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">数量</label><input id="ef_qty" type="number" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">服务内容</label><input id="ef_content" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">销售</label><input id="ef_sales" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">开始日期</label><input id="ef_start_date" placeholder="20260701" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+<div><label style="font-size:12px;color:#666">备注</label><input id="ef_remark" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"></div>
+</div>
+<input type="hidden" id="ef_edit_idx" value="">
+<div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end">
+  <button onclick="closeForm()" style="padding:8px 20px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">取消</button>
+  <button onclick="submitForm()" style="padding:8px 20px;background:#1a73e8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">提交到 GitHub Issue</button>
+</div>
+<div id="formMsg" style="margin-top:10px;font-size:12px;color:#666"></div>
 </div>
 </div>
 
@@ -355,19 +383,21 @@ function renderTable(){
   var page=filtered.slice(start,start+PER_PAGE);
   document.getElementById('recordInfo').textContent='共 '+total+' 条，第 '+(start+1)+'-'+Math.min(start+PER_PAGE,total)+' 条';
 
-  var th=['类型','客户','地址','联系人','电话','单号','服务','产品','数量','内容','实施编号','销售','开始','结束','状态','备注'];
+  var th=['类型','客户','地址','联系人','电话','单号','服务','产品','数量','内容','实施编号','销售','开始','结束','状态','备注',''];
   var h='<table><thead><tr>';
   th.forEach(function(t){h+='<th>'+t+'</th>'});
   h+='</tr></thead><tbody>';
-  page.forEach(function(r){
+  page.forEach(function(r,idx){
     var tc=r.t==='派单'?'type-p':r.t==='巡检'?'type-i':r.t==='值守'?'type-d':'type-m';
+    var gIdx=start+idx;
     h+='<tr><td><span class="type-badge '+tc+'">'+r.t+'</span></td>';
     h+='<td><b>'+(r.c||'-')+'</b></td><td>'+(r.a||'-')+'</td><td>'+(r.ct||'-')+'</td>';
     h+='<td>'+(r.ph||'-')+'</td><td style="font-size:10px">'+(r.o||'-')+'</td>';
     h+='<td>'+(r.sv||'-')+'</td><td>'+(r.pm||'-')+'</td><td>'+(r.q||'-')+'</td>';
     h+='<td>'+(r.cn||'-')+'</td><td>'+(r.in||'-')+'</td><td>'+(r.sl||'-')+'</td>';
     h+='<td>'+(r.sd||'-')+'</td><td>'+(r.ed||'-')+'</td><td>'+(r.st||'-')+'</td>';
-    h+='<td style="font-size:10px">'+(r.rm||'-')+'</td></tr>';
+    h+='<td style="font-size:10px">'+(r.rm||'-')+'</td>';
+    h+='<td><button onclick="editRecord('+gIdx+')" style="padding:3px 8px;font-size:10px;border:1px solid #1a73e8;background:#fff;color:#1a73e8;border-radius:4px;cursor:pointer" title="编辑">✎</button></td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tableContainer').innerHTML=h;
@@ -389,6 +419,121 @@ function renderTable(){
 }
 
 function goPage(p){currentPage=p;renderTable();}
+
+// ====== 新增/编辑功能 ======
+var EDIT_MODE='add';  // 'add' or 'edit'
+
+function openForm(){
+  EDIT_MODE='add';
+  document.getElementById('modalTitle').textContent='新增记录';
+  ['customer','order_no','contact','phone','address','service','product','qty','content','sales','start_date','remark'].forEach(function(f){
+    document.getElementById('ef_'+f).value='';
+  });
+  document.getElementById('ef_edit_idx').value='';
+  document.getElementById('formMsg').textContent='';
+  document.getElementById('editModal').style.display='block';
+}
+
+function editRecord(idx){
+  var r=filtered[idx];
+  if(!r) return;
+  EDIT_MODE='edit';
+  document.getElementById('modalTitle').textContent='编辑记录: '+(r.c||'');
+  document.getElementById('ef_customer').value=r.c||'';
+  document.getElementById('ef_order_no').value=r.o||'';
+  document.getElementById('ef_contact').value=r.ct||'';
+  document.getElementById('ef_phone').value=r.ph||'';
+  document.getElementById('ef_address').value=r.a||'';
+  document.getElementById('ef_service').value=r.sv||'';
+  document.getElementById('ef_product').value=r.pm||'';
+  document.getElementById('ef_qty').value=r.q||'';
+  document.getElementById('ef_content').value=r.cn||'';
+  document.getElementById('ef_sales').value=r.sl||'';
+  document.getElementById('ef_start_date').value=r.sd||'';
+  document.getElementById('ef_remark').value=r.rm||'';
+  document.getElementById('ef_edit_idx').value=idx;
+  document.getElementById('formMsg').textContent='';
+  document.getElementById('editModal').style.display='block';
+}
+
+function closeForm(){
+  document.getElementById('editModal').style.display='none';
+}
+
+function submitForm(){
+  var customer=document.getElementById('ef_customer').value.trim();
+  if(!customer){alert('请填写客户名称');return;}
+  
+  var data={
+    customer:customer,
+    order_no:document.getElementById('ef_order_no').value.trim(),
+    contact:document.getElementById('ef_contact').value.trim(),
+    phone:document.getElementById('ef_phone').value.trim(),
+    address:document.getElementById('ef_address').value.trim(),
+    service:document.getElementById('ef_service').value.trim(),
+    product:document.getElementById('ef_product').value.trim(),
+    qty:document.getElementById('ef_qty').value.trim(),
+    content:document.getElementById('ef_content').value.trim(),
+    sales:document.getElementById('ef_sales').value.trim(),
+    start_date:document.getElementById('ef_start_date').value.trim(),
+    remark:document.getElementById('ef_remark').value.trim(),
+    source:'CRM',pcat:'CX-SV'
+  };
+  
+  var payload={action:EDIT_MODE,data:data};
+  if(EDIT_MODE==='edit'){
+    var idx=parseInt(document.getElementById('ef_edit_idx').value);
+    if(idx>=0 && idx<filtered.length){
+      payload.original_order_no=filtered[idx].o||'';
+    }
+  }
+  
+  // 立即在页面中显示（localStorage暂存）
+  var local=JSON.parse(localStorage.getItem('sv_edits')||'[]');
+  local.push({ts:new Date().toISOString(),action:EDIT_MODE,data:data});
+  localStorage.setItem('sv_edits',JSON.stringify(local.slice(-50)));
+  
+  // 添加到内存中的 RECORDS 数组（客户端即时显示）
+  if(EDIT_MODE==='add'){
+    RECORDS.unshift({t:'派单',y:2026,c:data.customer,a:data.address,ct:data.contact,ph:data.phone,
+      o:data.order_no,sv:data.service,pm:data.product,q:data.qty,cn:data.content,
+      in:'',sl:data.sales,sd:data.start_date,ed:'',st:'待同步',rm:data.remark,
+      pc:data.pcat,sr:data.source,_local:true});
+  }else{
+    var idx=parseInt(document.getElementById('ef_edit_idx').value);
+    if(idx>=0 && idx<filtered.length){
+      var r=filtered[idx];
+      r.c=data.customer;r.a=data.address;r.ct=data.contact;r.ph=data.phone;
+      r.o=data.order_no;r.sv=data.service;r.pm=data.product;r.q=data.qty;
+      r.cn=data.content;r.sl=data.sales;r.sd=data.start_date;r.rm=data.remark;
+      r._local=true;
+    }
+  }
+  
+  // 生成 GitHub Issue 链接
+  var title=encodeURIComponent('数据编辑:'+(EDIT_MODE==='add'?'新增':'编辑')+':'+data.customer);
+  var body=encodeURIComponent('```json\n'+JSON.stringify(payload,null,2)+'\n```\n\n> 自动提交，请确认后点击 Submit new issue');
+  var url='https://github.com/DADIAO007/SV-dispatch-dashboard/issues/new?title='+title+'&body='+body;
+  
+  document.getElementById('formMsg').innerHTML='✅ 页面已更新！<br><a href="'+url+'" target="_blank" style="color:#1a73e8;font-weight:600">👉 点击此处打开 GitHub Issue 确认提交</a><br><span style="color:#999;font-size:11px">提交Issue后，数据将自动同步到WPS表格，2分钟内看板刷新</span>';
+  
+  doFilter();
+}
+
+// 页面加载时合并 localStorage 中的暂存数据
+if(RECORDS){
+  var pending=JSON.parse(localStorage.getItem('sv_edits')||'[]');
+  if(pending.length>0){
+    console.log('有 '+pending.length+' 条待同步记录');
+  }
+}
+
+window.addEventListener('load',function(){
+  // 关闭弹窗的点击外部
+  document.getElementById('editModal').addEventListener('click',function(e){
+    if(e.target===this) closeForm();
+  });
+});
 </script>
 </body>
 </html>'''
