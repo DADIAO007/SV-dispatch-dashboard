@@ -183,7 +183,6 @@ def generate_html(stats):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SV派单管理系统 - 数据看板</title>
-<script src="https://lib.baomitu.com/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#333}
@@ -341,7 +340,14 @@ function checkPw(){
     if(v===PW){
       document.getElementById('pwGate').style.display='none';
       document.getElementById('mainApp').style.display='block';
-      setTimeout(initCharts,200);
+      // 动态加载Chart.js
+      if(!document.getElementById('chartjs')){
+        var s=document.createElement('script');
+        s.id='chartjs';
+        s.src='https://lib.baomitu.com/Chart.js/4.4.1/chart.umd.min.js';
+        s.onload=function(){setTimeout(initCharts,100)};
+        document.head.appendChild(s);
+      }else{setTimeout(initCharts,100);}
     }else{
       var err=document.getElementById('pwErr');
       err.style.display='block';
