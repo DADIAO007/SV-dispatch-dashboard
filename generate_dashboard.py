@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-SV派单看板自动生成脚本
-直接从金山文档读取数据，生成双Tab静态HTML看板（概览 + 明细）
-用于GitHub Actions自动更新
+SV派单看板自动生成脚本 v3
+- 统计数据内嵌 index.html（~15KB）
+- 明细数据拆到 records.json（异步加载）
+- 修复搜索递归 bug
+- 加防抖 + 分页优化
 """
 import json, subprocess, os, sys
 
@@ -37,7 +39,6 @@ def to_rows(cells):
     return rows
 
 def normalize_records(rows, year, layout):
-    """将不同年份的列布局统一为标准字段"""
     records = []
     for r, row in rows.items():
         vals = {}
@@ -50,17 +51,14 @@ def normalize_records(rows, year, layout):
 
 def read_all_data():
     print("读取数据中...")
-    # 读取各工作表
     rows26 = to_rows(read_sheet(27, 800, 18))
     rows25 = to_rows(read_sheet(25, 1500, 22))
     rows24 = to_rows(read_sheet(1, 600, 22))
     rows_insp = to_rows(read_sheet(28, 200, 17))
     rows_duty = to_rows(read_sheet(15, 300, 23))
     rows_ms = to_rows(read_sheet(18, 500, 19))
-    
-    print(f"  2026派单:{len(rows26)} 2025派单:{len(rows25)} 2024派单:{len(rows24)} 巡检:{len(rows_insp)} 值守:{len(rows_duty)} 月结:{len(rows_ms)}")
-    
-    # 标准化派单记录
+    print(f"  2026:{len(rows26)} 2025:{len(rows25)} 2024:{len(rows24)} 巡检:{len(rows_insp)} 值守:{len(rows_duty)} 月结:{len(rows_ms)}")
+
     layout26 = {'serial':0,'customer':1,'address':2,'contact':3,'phone':4,'order_no':5,'service':6,
                'product':7,'qty':8,'content':9,'impl_no':10,'sales':11,'sales_phone':12,
                'start_date':13,'end_date':14,'remark':15,'pcat':16,'source':17}
@@ -72,156 +70,110 @@ def read_all_data():
                'pcat':5,'source':6,'order_no':7,'service':8,'product':9,'qty':10,
                'content':11,'impl_no':12,'sales':13,'sales_phone':14,
                'status':15,'start_date':16,'end_date':17,'actual_end':18,'mgr':19,'mgr_phone':20,'remark':21}
-    
+
     all_dispatch = normalize_records(rows26, 2026, layout26)
     all_dispatch += normalize_records(rows25, 2025, layout25)
     all_dispatch += normalize_records(rows24, 2024, layout24)
-    
-    # 巡检 → 统一格式
+
     insp = []
     for r, row in rows_insp.items():
         if not row.get(1,''): continue
-        insp.append({'type':'巡检','serial':row.get(0,''),'customer':row.get(1,''),'address':row.get(2,''),
-                    'contact':row.get(3,''),'phone':row.get(4,''),'order_no':row.get(5,''),'service':row.get(6,''),
-                    'product':row.get(7,''),'qty':row.get(8,''),'content':row.get(9,''),'impl_no':row.get(10,''),
-                    'sales':row.get(11,''),'sales_phone':row.get(12,''),'status':row.get(13,''),
-                    'start_date':row.get(14,''),'end_date':row.get(15,''),'remark':row.get(16,''),'year':0})
-    
-    # 值守 → 统一格式
+        insp.append({'t':'巡检','y':0,'c':row.get(1,''),'a':row.get(2,'')[:30],
+                    'ct':row.get(3,''),'ph':row.get(4,''),'o':row.get(5,''),'sv':row.get(6,''),
+                    'pm':row.get(7,''),'q':row.get(8,''),'cn':row.get(9,'')[:40],'in':row.get(10,''),
+                    'sl':row.get(11,''),'sd':row.get(14,''),'ed':row.get(15,''),'st':row.get(13,''),'rm':row.get(16,'')[:30]})
     duty = []
     for r, row in rows_duty.items():
         if not row.get(1,''): continue
-        duty.append({'type':'值守','serial':row.get(0,''),'customer':row.get(1,''),'address':row.get(2,''),
-                    'contact':row.get(3,''),'phone':row.get(4,''),'pcat':row.get(5,''),'source':row.get(6,''),
-                    'order_no':row.get(7,''),'service':row.get(8,''),'product':row.get(9,''),'qty':row.get(10,''),
-                    'content':row.get(11,''),'impl_no':row.get(12,''),'sales':row.get(13,''),'sales_phone':row.get(14,''),
-                    'status':row.get(15,''),'start_date':row.get(16,''),'end_date':row.get(17,''),
-                    'actual_end':row.get(18,''),'mgr':row.get(19,''),'mgr_phone':row.get(20,''),'remark':row.get(21,''),'year':0})
-    
-    # 通信月结
+        duty.append({'t':'值守','y':0,'c':row.get(1,''),'a':row.get(2,'')[:30],
+                    'ct':row.get(3,''),'ph':row.get(4,''),'o':row.get(7,''),'sv':row.get(8,''),
+                    'pm':row.get(9,''),'q':row.get(10,''),'cn':row.get(11,'')[:40],'in':row.get(12,''),
+                    'sl':row.get(13,''),'sd':row.get(16,''),'ed':row.get(17,''),'st':row.get(15,''),'rm':row.get(21,'')[:30]})
     ms = []
     for r, row in rows_ms.items():
         if not row.get(6,''): continue
-        ms.append({'type':'月结','serial':row.get(0,''),'order_no':row.get(1,''),'start_date':row.get(2,''),
-                  'mu':row.get(3,''),'initiator':row.get(4,''),'pm':row.get(5,''),'customer':row.get(6,''),
-                  'project':row.get(7,''),'demand':row.get(8,''),'address':row.get(9,''),
-                  'product':row.get(10,''),'content':row.get(11,''),'qty':row.get(12,''),
-                  'service':row.get(13,''),'source':row.get(16,''),'cost_no':row.get(17,''),
-                  'remark':row.get(18,''),'year':0})
-    
-    # ==== 统计 ====
+        ms.append({'t':'月结','y':0,'c':row.get(6,''),'a':row.get(9,'')[:30],
+                   'ct':'','ph':'','o':row.get(1,''),'sv':row.get(13,''),'pm':row.get(10,''),
+                   'q':row.get(12,''),'cn':row.get(11,'')[:40],'in':'','sl':row.get(5,''),
+                   'sd':row.get(2,''),'ed':'','st':'','rm':row.get(18,'')[:30]})
+
+    # 统计数据（只嵌入这部分到HTML，体积小）
     total_disp = len(all_dispatch)
     customers = len(set(d['customer'] for d in all_dispatch))
     disp2026 = sum(1 for d in all_dispatch if d.get('year')==2026)
-    
-    # 年度趋势
     yc = {}
     for d in all_dispatch: yc[d['year']] = yc.get(d['year'],0)+1
     yearly = [{'year':y,'count':yc[y]} for y in sorted(yc)]
-    
-    # 月度
     mc = {}
     for d in all_dispatch:
         if d.get('year')==2026:
             sd = d.get('start_date','')
             if sd and len(sd)>=6: mc[sd[:6]] = mc.get(sd[:6],0)+1
     monthly = [{'month':m,'count':mc[m]} for m in sorted(mc)]
-    
-    # TOP10
     cc = {}
     for d in all_dispatch: cc[d['customer']] = cc.get(d['customer'],0)+1
     ctop = [{'name':n,'count':c} for n,c in sorted(cc.items(),key=lambda x:-x[1])[:10]]
-    
-    # 服务
     sc = {}
     for d in all_dispatch:
         s = d.get('service','')
         if s: sc[s] = sc.get(s,0)+1
     srv = [{'name':n,'count':c} for n,c in sorted(sc.items(),key=lambda x:-x[1])[:15]]
-    
-    # 产品
     pc = {}
     for d in all_dispatch:
         p = d.get('product','')
         if p: pc[p] = pc.get(p,0)+1
     prod = [{'name':n,'count':c} for n,c in sorted(pc.items(),key=lambda x:-x[1])[:12]]
-    
-    # 销售
     sl = {}
     for d in all_dispatch:
         s = d.get('sales','')
         if s and s != '\\': sl[s] = sl.get(s,0)+1
     sales = [{'name':n,'count':c} for n,c in sorted(sl.items(),key=lambda x:-x[1])[:10]]
-    
-    # 状态
     st = {}
     for d in all_dispatch:
         if d.get('year')==2026:
             s = d.get('status','') or '未标记'
             st[s] = st.get(s,0)+1
-    for d in insp: st[d.get('status','') or '未标记'] = st.get(d.get('status','') or '未标记',0)+1
-    for d in duty: st[d.get('status','') or '未标记'] = st.get(d.get('status','') or '未标记',0)+1
+    for d in insp: st[d.get('st','') or '未标记'] = st.get(d.get('st','') or '未标记',0)+1
+    for d in duty: st[d.get('st','') or '未标记'] = st.get(d.get('st','') or '未标记',0)+1
     status = [{'name':n,'count':c} for n,c in sorted(st.items(),key=lambda x:-x[1])]
-    
-    # 最近10条(2026)
     recent = []
     for d in all_dispatch:
         if d.get('year')==2026:
             recent.append({'customer':d['customer'],'order':d.get('order_no',''),'service':d.get('service',''),
                          'model':d.get('product',''),'date':d.get('start_date',''),'sales':d.get('sales','')})
             if len(recent)>=10: break
-    
-    # 明细记录去重精简
+
+    # 明细记录（拆到 records.json）
     all_records = []
     for d in all_dispatch:
-        all_records.append({
-            't':'派单','y':d.get('year',0),'c':d['customer'],'a':d.get('address','')[:30],
-            'ct':d.get('contact',''),'ph':d.get('phone',''),'o':d.get('order_no',''),
-            'sv':d.get('service',''),'pm':d.get('product',''),'q':d.get('qty',''),
-            'cn':d.get('content','')[:40],'in':d.get('impl_no',''),'sl':d.get('sales',''),
-            'sd':d.get('start_date',''),'ed':d.get('end_date',''),'st':d.get('status',''),
-            'rm':d.get('remark','')[:30],'pc':d.get('pcat',''),'sr':d.get('source','')
-        })
-    for d in insp:
-        all_records.append({
-            't':'巡检','y':0,'c':d['customer'],'a':d.get('address','')[:30],
-            'ct':d.get('contact',''),'ph':d.get('phone',''),'o':d.get('order_no',''),
-            'sv':d.get('service',''),'pm':d.get('product',''),'q':d.get('qty',''),
-            'cn':d.get('content','')[:40],'in':d.get('impl_no',''),'sl':d.get('sales',''),
-            'sd':d.get('start_date',''),'ed':d.get('end_date',''),'st':d.get('status',''),
-            'rm':d.get('remark','')[:30],'pc':'','sr':''
-        })
-    for d in duty:
-        all_records.append({
-            't':'值守','y':0,'c':d['customer'],'a':d.get('address','')[:30],
-            'ct':d.get('contact',''),'ph':d.get('phone',''),'o':d.get('order_no',''),
-            'sv':d.get('service',''),'pm':d.get('product',''),'q':d.get('qty',''),
-            'cn':d.get('content','')[:40],'in':d.get('impl_no',''),'sl':d.get('sales',''),
-            'sd':d.get('start_date',''),'ed':d.get('end_date',''),'st':d.get('status',''),
-            'rm':d.get('remark','')[:30],'pc':d.get('pcat',''),'sr':d.get('source','')
-        })
-    for d in ms:
-        all_records.append({
-            't':'月结','y':0,'c':d['customer'],'a':d.get('address','')[:30],
-            'ct':'','ph':'','o':d.get('order_no',''),
-            'sv':d.get('service',''),'pm':d.get('product',''),'q':d.get('qty',''),
-            'cn':d.get('content','')[:40],'in':'','sl':d.get('pm',''),
-            'sd':d.get('start_date',''),'ed':'','st':'',
-            'rm':d.get('remark','')[:30],'pc':'','sr':d.get('cost_no','')
-        })
-    
-    return {
+        all_records.append({'t':'派单','y':d.get('year',0),'c':d['customer'],'a':d.get('address','')[:30],
+            'ct':d.get('contact',''),'ph':d.get('phone',''),'o':d.get('order_no',''),'sv':d.get('service',''),
+            'pm':d.get('product',''),'q':d.get('qty',''),'cn':d.get('content','')[:40],'in':d.get('impl_no',''),
+            'sl':d.get('sales',''),'sd':d.get('start_date',''),'ed':d.get('end_date',''),'st':d.get('status',''),
+            'rm':d.get('remark','')[:30],'pc':d.get('pcat',''),'sr':d.get('source','')})
+    all_records.extend(insp)
+    all_records.extend(duty)
+    all_records.extend(ms)
+
+    # 返回两部分：统计（嵌入HTML）+ 明细（单独JSON）
+    stats = {
         'stats':{'grand_total':total_disp+len(insp)+len(duty)+len(ms),
                  'dispatch_total':total_disp,'dispatch_2026':disp2026,'customers':customers,
                  'inspection':len(insp),'duty':len(duty),'settlement':len(ms)},
         'yearly':yearly,'monthly':monthly,'ctop':ctop,'srv':srv,'prod':prod,
-        'sales':sales,'status':status,'recent':recent,'records':all_records
+        'sales':sales,'status':status,'recent':recent
     }
+    return stats, all_records
 
-def generate_html(data):
-    s = data['stats']
-    recent_rows = ''.join(f'<tr><td><b>{r["customer"]}</b></td><td>{r["service"] or "-"}</td><td>{r["model"] or "-"}</td><td>{r["date"] or "-"}</td><td>{r["sales"] or "-"}</td></tr>' for r in data['recent'])
-    
+
+def generate_html(stats):
+    s = stats['stats']
+    recent_rows = ''.join(
+        f'<tr><td><b>{r["customer"]}</b></td><td>{r["service"] or "-"}</td><td>{r["model"] or "-"}</td><td>{r["date"] or "-"}</td><td>{r["sales"] or "-"}</td></tr>'
+        for r in stats['recent']
+    )
+    stats_json = json.dumps(stats, ensure_ascii=False)
+
     return '''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -252,20 +204,18 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 th{background:#f8f9fa;padding:7px 8px;text-align:left;font-weight:600;color:#555;border-bottom:2px solid #e9ecef;white-space:nowrap}
 td{padding:5px 8px;border-bottom:1px solid #f0f2f5;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 tr:hover{background:#f8f9ff}
-.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500}
-.b-b{background:#e3f2fd;color:#1565c0}.b-g{background:#e8f5e9;color:#2e7d32}
-.b-o{background:#fff3e0;color:#e65100}.b-p{background:#f3e5f5;color:#7b1fa2}.b-r{background:#ffebee;color:#c62828}.b-te{background:#e0f2f1;color:#00695c}
 .toolbar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
 .toolbar select,.toolbar input{padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none}
 .toolbar input{flex:1;min-width:200px}.toolbar input:focus{border-color:#1a73e8}
 .toolbar .info{font-size:12px;color:#999}
-.pagination{display:flex;justify-content:center;gap:6px;margin-top:14px}
-.pagination button{padding:6px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:12px}
+.pagination{display:flex;justify-content:center;gap:4px;margin-top:14px;flex-wrap:wrap}
+.pagination button{padding:5px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:12px}
 .pagination button:hover{background:#f0f2f5}
 .pagination button.active{background:#1a73e8;color:#fff;border-color:#1a73e8}
 .pagination button:disabled{opacity:.4;cursor:default}
 .type-badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;color:#fff;font-weight:600}
 .type-p{background:#1a73e8}.type-i{background:#27ae60}.type-d{background:#8e44ad}.type-m{background:#1abc9c}
+.loading{text-align:center;padding:40px;color:#999;font-size:14px}
 @media(max-width:768px){.g2,.g3{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -280,12 +230,12 @@ tr:hover{background:#f8f9ff}
 <div class="container">
 <div id="tabOverview">
   <div class="stats">
-    <div class="sc"><div class="n">'''+str(s['grand_total'])+'''</div><div class="l">总记录数</div></div>
-    <div class="sc"><div class="n">'''+str(s['dispatch_total'])+'''</div><div class="l">派单记录</div></div>
-    <div class="sc gn"><div class="n">'''+str(s['customers'])+'''</div><div class="l">合作客户</div></div>
-    <div class="sc or"><div class="n">'''+str(s['inspection'])+'''</div><div class="l">巡检任务</div></div>
-    <div class="sc pu"><div class="n">'''+str(s['duty'])+'''</div><div class="l">值守任务</div></div>
-    <div class="sc te"><div class="n">'''+str(s['settlement'])+'''</div><div class="l">通信月结</div></div>
+    <div class="sc"><div class="n">''' + str(s['grand_total']) + '''</div><div class="l">总记录数</div></div>
+    <div class="sc"><div class="n">''' + str(s['dispatch_total']) + '''</div><div class="l">派单记录</div></div>
+    <div class="sc gn"><div class="n">''' + str(s['customers']) + '''</div><div class="l">合作客户</div></div>
+    <div class="sc or"><div class="n">''' + str(s['inspection']) + '''</div><div class="l">巡检任务</div></div>
+    <div class="sc pu"><div class="n">''' + str(s['duty']) + '''</div><div class="l">值守任务</div></div>
+    <div class="sc te"><div class="n">''' + str(s['settlement']) + '''</div><div class="l">通信月结</div></div>
   </div>
   <div class="g2">
     <div class="card"><h3>年度派单趋势</h3><canvas id="c1"></canvas></div>
@@ -301,7 +251,7 @@ tr:hover{background:#f8f9ff}
     <div class="card"><h3>任务状态分布</h3><canvas id="c7"></canvas></div>
     <div class="card"><h3>最近10条派单</h3>
       <table><thead><tr><th>客户</th><th>服务</th><th>型号</th><th>日期</th><th>销售</th></tr></thead>
-      <tbody>'''+recent_rows+'''</tbody></table>
+      <tbody>''' + recent_rows + '''</tbody></table>
     </div>
   </div>
 </div>
@@ -309,61 +259,82 @@ tr:hover{background:#f8f9ff}
 <div id="tabDetail" style="display:none">
   <div class="card">
     <div class="toolbar">
-      <select id="filterYear" onchange="renderTable()">
+      <select id="filterYear" onchange="doFilter()">
         <option value="all">全部年份</option>
         <option value="2026">2026年</option>
         <option value="2025">2025年</option>
         <option value="2024">2024年</option>
       </select>
-      <select id="filterType" onchange="renderTable()">
+      <select id="filterType" onchange="doFilter()">
         <option value="all">全部类型</option>
         <option value="派单">派单</option>
         <option value="巡检">巡检</option>
         <option value="值守">值守</option>
         <option value="月结">通信月结</option>
       </select>
-      <input type="text" id="searchInput" placeholder="搜索：客户/单号/产品/服务/销售..." oninput="renderTable()">
+      <input type="text" id="searchInput" placeholder="搜索：客户/单号/产品/服务/销售..." oninput="debounceSearch()">
       <span class="info" id="recordInfo"></span>
     </div>
-    <div style="overflow-x:auto" id="tableContainer"></div>
+    <div style="overflow-x:auto" id="tableContainer"><div class="loading">加载数据中...</div></div>
     <div class="pagination" id="pagination"></div>
   </div>
 </div>
 </div>
 
 <script>
-var D = '''+json.dumps(data,ensure_ascii=False)+''';
-D = JSON.parse(D);
+// 统计数据（内嵌，体积小）
+var S = ''' + stats_json + ''';
 var C=['#1a73e8','#e67e22','#27ae60','#8e44ad','#e74c3c','#1abc9c','#f39c12','#2ecc71','#9b59b6','#e91e63','#00bcd4','#ff5722'];
 
+// 图表初始化
 function ci(id,t,lbs,vals,bg){new Chart(document.getElementById(id),{type:t,data:{labels:lbs,datasets:[{data:vals,backgroundColor:bg||'rgba(26,115,232,0.7)',borderColor:'#1a73e8',borderWidth:t==='line'?2:0,borderRadius:4,tension:.3}]},options:{responsive:true,plugins:{legend:{display:t==='doughnut'}},scales:{y:{beginAtZero:true,grid:{color:'#eee'}},x:{grid:{display:false}}}}})}
-ci('c1','bar',D.yearly.map(function(i){return i.year}),D.yearly.map(function(i){return i.count}));
-ci('c2','line',D.monthly.map(function(i){return(i.month||'').slice(-2)+'月'}),D.monthly.map(function(i){return i.count}));
-ci('c3','bar',D.ctop.map(function(i){return i.name.length>5?i.name.slice(0,5)+'..':i.name}),D.ctop.map(function(i){return i.count}),C);
-ci('c4','doughnut',D.srv.map(function(i){return i.name}),D.srv.map(function(i){return i.count}),C);
-ci('c5','bar',D.prod.map(function(i){return i.name.length>8?i.name.slice(0,8)+'..':i.name}),D.prod.map(function(i){return i.count}),C);
-ci('c6','bar',D.sales.map(function(i){return i.name}),D.sales.map(function(i){return i.count}),C);
-ci('c7','doughnut',D.status.map(function(i){return i.name}),D.status.map(function(i){return i.count}),C);
+ci('c1','bar',S.yearly.map(function(i){return i.year}),S.yearly.map(function(i){return i.count}));
+ci('c2','line',S.monthly.map(function(i){return(i.month||'').slice(-2)+'月'}),S.monthly.map(function(i){return i.count}));
+ci('c3','bar',S.ctop.map(function(i){return i.name.length>5?i.name.slice(0,5)+'..':i.name}),S.ctop.map(function(i){return i.count}),C);
+ci('c4','doughnut',S.srv.map(function(i){return i.name}),S.srv.map(function(i){return i.count}),C);
+ci('c5','bar',S.prod.map(function(i){return i.name.length>8?i.name.slice(0,8)+'..':i.name}),S.prod.map(function(i){return i.count}),C);
+ci('c6','bar',S.sales.map(function(i){return i.name}),S.sales.map(function(i){return i.count}),C);
+ci('c7','doughnut',S.status.map(function(i){return i.name}),S.status.map(function(i){return i.count}),C);
 
-// Detail tab
-var PER_PAGE=50,currentPage=1,filtered=[];
+// 明细数据（异步加载）
+var RECORDS=null, filtered=[], PER_PAGE=50, currentPage=1, searchTimer=null;
 
 function switchTab(tab,btn){
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active')});
   btn.classList.add('active');
   document.getElementById('tabOverview').style.display=tab==='overview'?'block':'none';
   document.getElementById('tabDetail').style.display=tab==='detail'?'block':'none';
-  if(tab==='detail') renderTable();
+  if(tab==='detail' && !RECORDS) loadRecords();
 }
 
-function filterRecords(){
+function loadRecords(){
+  fetch('records.json')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      RECORDS=data;
+      doFilter();
+    })
+    .catch(function(e){
+      document.getElementById('tableContainer').innerHTML='<div class="loading">数据加载失败: '+e.message+'</div>';
+    });
+}
+
+// 防抖搜索
+function debounceSearch(){
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(doFilter,300);
+}
+
+// 过滤数据（不调用renderTable，消除递归）
+function doFilter(){
+  if(!RECORDS) return;
   var year=document.getElementById('filterYear').value;
   var type=document.getElementById('filterType').value;
   var kw=(document.getElementById('searchInput').value||'').toLowerCase();
-  filtered=D.records.filter(function(r){
-    if(year!=='all' && r.y!=parseInt(year)) return false;
-    if(type!=='all' && r.t!==type) return false;
-    if(!kw) return true;
+  filtered=RECORDS.filter(function(r){
+    if(year!=='all'&&r.y!=parseInt(year))return false;
+    if(type!=='all'&&r.t!==type)return false;
+    if(!kw)return true;
     return (r.c||'').toLowerCase().indexOf(kw)>=0||(r.o||'').toLowerCase().indexOf(kw)>=0
         ||(r.pm||'').toLowerCase().indexOf(kw)>=0||(r.sv||'').toLowerCase().indexOf(kw)>=0
         ||(r.sl||'').toLowerCase().indexOf(kw)>=0||(r.ct||'').toLowerCase().indexOf(kw)>=0;
@@ -372,65 +343,78 @@ function filterRecords(){
   renderTable();
 }
 
+// 渲染表格（不调用doFilter，消除递归）
 function renderTable(){
-  filterRecords();
   var total=filtered.length;
   var pages=Math.ceil(total/PER_PAGE)||1;
-  if(currentPage>pages) currentPage=pages;
+  if(currentPage>pages)currentPage=pages;
   var start=(currentPage-1)*PER_PAGE;
   var page=filtered.slice(start,start+PER_PAGE);
-  document.getElementById('recordInfo').textContent='共 '+total+' 条记录，第 '+(start+1)+'-'+Math.min(start+PER_PAGE,total)+' 条';
-  
-  var tc=['t','c','a','ct','ph','o','sv','pm','q','cn','in','sl','sd','ed','st','rm'];
+  document.getElementById('recordInfo').textContent='共 '+total+' 条，第 '+(start+1)+'-'+Math.min(start+PER_PAGE,total)+' 条';
+
   var th=['类型','客户','地址','联系人','电话','单号','服务','产品','数量','内容','实施编号','销售','开始','结束','状态','备注'];
   var h='<table><thead><tr>';
-  for(var i=0;i<th.length;i++) h+='<th>'+th[i]+'</th>';
+  th.forEach(function(t){h+='<th>'+t+'</th>'});
   h+='</tr></thead><tbody>';
-  
-  for(var j=0;j<page.length;j++){
-    var r=page[j];
-    var tCls=r.t==='派单'?'type-p':r.t==='巡检'?'type-i':r.t==='值守'?'type-d':'type-m';
-    h+='<tr><td><span class="type-badge '+tCls+'">'+r.t+'</span></td>';
+  page.forEach(function(r){
+    var tc=r.t==='派单'?'type-p':r.t==='巡检'?'type-i':r.t==='值守'?'type-d':'type-m';
+    h+='<tr><td><span class="type-badge '+tc+'">'+r.t+'</span></td>';
     h+='<td><b>'+(r.c||'-')+'</b></td><td>'+(r.a||'-')+'</td><td>'+(r.ct||'-')+'</td>';
     h+='<td>'+(r.ph||'-')+'</td><td style="font-size:10px">'+(r.o||'-')+'</td>';
     h+='<td>'+(r.sv||'-')+'</td><td>'+(r.pm||'-')+'</td><td>'+(r.q||'-')+'</td>';
     h+='<td>'+(r.cn||'-')+'</td><td>'+(r.in||'-')+'</td><td>'+(r.sl||'-')+'</td>';
     h+='<td>'+(r.sd||'-')+'</td><td>'+(r.ed||'-')+'</td><td>'+(r.st||'-')+'</td>';
     h+='<td style="font-size:10px">'+(r.rm||'-')+'</td></tr>';
-  }
+  });
   h+='</tbody></table>';
   document.getElementById('tableContainer').innerHTML=h;
-  
+
+  // 分页：只显示当前页前后5页
   var pg='';
-  for(var p=1;p<=pages;p++){
+  var showStart=Math.max(1,currentPage-5);
+  var showEnd=Math.min(pages,currentPage+5);
+  pg+='<button onclick="goPage(1)" '+(currentPage<=1?'disabled':'')+'>首页</button>';
+  pg+='<button onclick="goPage('+(currentPage-1)+')" '+(currentPage<=1?'disabled':'')+'>‹</button>';
+  if(showStart>1) pg+='<span style="padding:5px 4px;color:#999">...</span>';
+  for(var p=showStart;p<=showEnd;p++){
     pg+='<button onclick="goPage('+p+')" class="'+(p===currentPage?'active':'')+'">'+p+'</button>';
   }
-  document.getElementById('pagination').innerHTML=
-    '<button onclick="goPage(1)" '+(currentPage<=1?'disabled':'')+'>首页</button>'+
-    '<button onclick="goPage('+(currentPage-1)+')" '+(currentPage<=1?'disabled':'')+'>上一页</button>'+
-    pg+
-    '<button onclick="goPage('+(currentPage+1)+')" '+(currentPage>=pages?'disabled':'')+'>下一页</button>'+
-    '<button onclick="goPage('+pages+')" '+(currentPage>=pages?'disabled':'')+'>末页</button>';
+  if(showEnd<pages) pg+='<span style="padding:5px 4px;color:#999">...</span>';
+  pg+='<button onclick="goPage('+(currentPage+1)+')" '+(currentPage>=pages?'disabled':'')+'>›</button>';
+  pg+='<button onclick="goPage('+pages+')" '+(currentPage>=pages?'disabled':'')+'>末页</button>';
+  document.getElementById('pagination').innerHTML=pg;
 }
 
-function goPage(p){currentPage=p;renderTable();window.scrollTo(0,300);}
+function goPage(p){currentPage=p;renderTable();}
 </script>
 </body>
 </html>'''
 
+
 def main():
     print("="*50)
-    print("SV派单看板生成器 (双Tab版)")
+    print("SV派单看板生成器 v3 (拆分数据)")
     print("="*50)
-    data = read_all_data()
-    print("生成HTML...")
-    html = generate_html(data)
+    stats, records = read_all_data()
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    path = os.path.join(OUTPUT_DIR, 'index.html')
-    with open(path, 'w', encoding='utf-8') as f:
+
+    # 输出 index.html（只含统计，体积小）
+    html = generate_html(stats)
+    html_path = os.path.join(OUTPUT_DIR, 'index.html')
+    with open(html_path, 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f"✅ {path} ({os.path.getsize(path)/1024:.1f} KB)")
-    print(f"   总:{data['stats']['grand_total']} | 派单:{data['stats']['dispatch_total']} | 巡检:{data['stats']['inspection']} | 值守:{data['stats']['duty']} | 月结:{data['stats']['settlement']}")
+    print(f"✅ index.html: {os.path.getsize(html_path)/1024:.1f} KB")
+
+    # 输出 records.json（明细数据，异步加载）
+    json_path = os.path.join(OUTPUT_DIR, 'records.json')
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(records, f, ensure_ascii=False)
+    print(f"✅ records.json: {os.path.getsize(json_path)/1024:.1f} KB ({len(records)} 条)")
+
+    s = stats['stats']
+    print(f"   总:{s['grand_total']} | 派单:{s['dispatch_total']} | 巡检:{s['inspection']} | 值守:{s['duty']} | 月结:{s['settlement']}")
+
 
 if __name__ == '__main__':
     main()
