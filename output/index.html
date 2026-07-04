@@ -54,7 +54,31 @@ tr:hover{background:#f8f9ff}
 .tag-p{background:#1a73e8}.tag-i{background:#27ae60}.tag-d{background:#8e44ad}.tag-m{background:#1abc9c}
 .tabcontent{display:none}
 .tabcontent.on{display:block}
-@media(max-width:768px){.g2,.g3{grid-template-columns:1fr}.st{grid-template-columns:repeat(2,1fr)}}
+.btn-add{background:#27ae60;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap}
+.btn-add:hover{background:#219a52}
+.btn-edit{background:none;border:1px solid #1a73e8;color:#1a73e8;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:10px;white-space:nowrap}
+.btn-edit:hover{background:#e8f0fe}
+.btn-submit{background:#1a73e8;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.btn-submit:hover{background:#1557b0}
+.btn-cancel{background:#f0f2f5;color:#555;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-right:8px}
+.btn-cancel:hover{background:#ddd}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:none;align-items:center;justify-content:center}
+.modal-overlay.on{display:flex}
+.modal-box{background:#fff;border-radius:12px;width:95%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.modal-hdr{padding:14px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}
+.modal-hdr h3{font-size:16px;margin:0}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:#999;padding:0 4px;line-height:1}
+.modal-close:hover{color:#333}
+.modal-body{overflow-y:auto;padding:16px 20px;flex:1}
+.modal-body .fg{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+.modal-body .fg label{font-size:11px;color:#666;display:block;margin-bottom:2px}
+.modal-body .fg input,.modal-body .fg select,.modal-body .fg textarea{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;outline:none}
+.modal-body .fg input:focus,.modal-body .fg select:focus,.modal-body .fg textarea:focus{border-color:#1a73e8}
+.modal-body .fg textarea{min-height:50px;resize:vertical}
+.modal-body .fg .full{grid-column:1/-1}
+.modal-ftr{padding:12px 20px;border-top:1px solid #eee;display:flex;justify-content:flex-end;align-items:center}
+.modal-toast{background:#333;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10001;display:none;white-space:nowrap}
+@media(max-width:768px){.g2,.g3{grid-template-columns:1fr}.st{grid-template-columns:repeat(2,1fr)}.modal-body .fg{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -138,6 +162,7 @@ function go(){
   <div class="cd">
     <div class="tb-bar">
       <input type="text" id="search_dispatch" placeholder="搜索..." oninput="doFilter('dispatch')">
+      <button class="btn-add" onclick="openModal('dispatch',null)">➕ 新增记录</button>
       <span class="info" id="info_dispatch"></span>
     </div>
     <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto">
@@ -154,6 +179,7 @@ function go(){
   <div class="cd">
     <div class="tb-bar">
       <input type="text" id="search_monthly" placeholder="搜索..." oninput="doFilter('monthly')">
+      <button class="btn-add" onclick="openModal('monthly',null)">➕ 新增记录</button>
       <span class="info" id="info_monthly"></span>
     </div>
     <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto">
@@ -170,6 +196,7 @@ function go(){
   <div class="cd">
     <div class="tb-bar">
       <input type="text" id="search_inspection" placeholder="搜索..." oninput="doFilter('inspection')">
+      <button class="btn-add" onclick="openModal('inspection',null)">➕ 新增记录</button>
       <span class="info" id="info_inspection"></span>
     </div>
     <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto">
@@ -186,6 +213,7 @@ function go(){
   <div class="cd">
     <div class="tb-bar">
       <input type="text" id="search_duty" placeholder="搜索..." oninput="doFilter('duty')">
+      <button class="btn-add" onclick="openModal('duty',null)">➕ 新增记录</button>
       <span class="info" id="info_duty"></span>
     </div>
     <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto">
@@ -202,6 +230,7 @@ function go(){
   <div class="cd">
     <div class="tb-bar">
       <input type="text" id="search_batch_qa" placeholder="搜索..." oninput="doFilter('batch_qa')">
+      <button class="btn-add" onclick="openModal('batch_qa',null)">➕ 新增记录</button>
       <span class="info" id="info_batch_qa"></span>
     </div>
     <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto">
@@ -218,6 +247,7 @@ function go(){
   <div class="cd">
     <div class="tb-bar">
       <input type="text" id="search_batch_wo" placeholder="搜索..." oninput="doFilter('batch_wo')">
+      <button class="btn-add" onclick="openModal('batch_wo',null)">➕ 新增记录</button>
       <span class="info" id="info_batch_wo"></span>
     </div>
     <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto">
@@ -232,6 +262,21 @@ function go(){
 
 </div>
 </div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="modalTitle">编辑记录</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-submit" id="modalSubmit" onclick="submitIssue()">生成 Issue</button>
+    </div>
+  </div>
+</div>
+<div class="modal-toast" id="modalToast"></div>
 
 <script>
 var STATS={"stats": {"total": 2979, "dispatch": 2511, "inspection": 69, "duty": 80, "monthly": 319, "batch_qa": 32, "batch_wo": 109, "customers": 430, "d2024": 480, "d2025": 1242, "d2026": 789}, "yearly": [{"year": 2024, "count": 480}, {"year": 2025, "count": 1242}, {"year": 2026, "count": 789}], "monthly_chart": [{"month": "202512", "count": 9}, {"month": "202601", "count": 150}, {"month": "202602", "count": 64}, {"month": "202603", "count": 109}, {"month": "202604", "count": 108}, {"month": "202605", "count": 172}, {"month": "202606", "count": 154}, {"month": "202607", "count": 6}], "ctop": [{"name": "平安科技", "count": 573}, {"name": "南网", "count": 97}, {"name": "中石化", "count": 79}, {"name": "国家电网", "count": 64}, {"name": "湖北移动", "count": 44}, {"name": "中行江苏", "count": 37}, {"name": "南方电网", "count": 34}, {"name": "招商银行", "count": 30}, {"name": "贵州联通", "count": 28}, {"name": "平安银行-观澜机房", "count": 27}], "srv": [{"name": "硬件安装", "count": 952}, {"name": "集成化交付", "count": 425}, {"name": "操作系统+集成化交付", "count": 234}, {"name": "通信月结", "count": 163}, {"name": "特殊支持", "count": 157}, {"name": "硬件安装服务", "count": 109}, {"name": "人天结算", "count": 59}, {"name": "软硬件集中部署服务", "count": 51}, {"name": "集成化交付服务", "count": 42}, {"name": "集成化交付+操作系统安装", "count": 31}, {"name": "硬件\\操作系统", "count": 25}, {"name": "PC硬件安装服务", "count": 23}], "prod": [{"name": "CS5280H2", "count": 1037}, {"name": "CS5280H3", "count": 677}, {"name": "PPU", "count": 107}, {"name": "CS5280K2", "count": 99}, {"name": "CE520F", "count": 86}, {"name": "CS5420H2", "count": 61}, {"name": "CS8260F3", "count": 59}, {"name": "CS5260H2", "count": 59}, {"name": "NF5468H7", "count": 43}, {"name": "CS5280F3", "count": 35}], "sales": [{"name": "杨艺敏", "count": 588}, {"name": "张洋洋", "count": 167}, {"name": "王杨昆", "count": 95}, {"name": "苗培杰", "count": 80}, {"name": "田新苗", "count": 54}, {"name": "郝健", "count": 51}, {"name": "林博文", "count": 49}, {"name": "王星星", "count": 45}, {"name": "李春烨", "count": 37}, {"name": "刘乐文", "count": 32}], "status": [{"name": "待处理", "count": 789}], "recent": [{"t": "派单", "y": 2026, "c": "平安理财", "a": "福田", "ct": "陈小跃", "ph": "18026017691", "o": "CX-SV250038914", "sv": "硬件安装", "pm": "CS5280H3", "q": 3, "cn": "上架初始化", "in": "", "sl": "张洋洋", "slp": "13364013479", "sd": "20260706", "ed": "20260712", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "江苏移动", "a": "江苏移动丽水培训中心-北门", "ct": "金向平", "ph": "17693157365", "o": "CX-SV260010080", "sv": "开箱督导", "pm": "服务器（未指定具体型号）", "q": 53, "cn": "现场督导开箱验货，需提前联系客户确定人员信息", "in": "", "sl": "徐冬荣", "slp": "", "sd": "20260703", "ed": "", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "53台服务器预计7月4日周六到货；销售订单：700", "pc": "CX-SV", "sr": "CRM"}, {"t": "派单", "y": 2026, "c": "天翼云", "a": "福建省泉州市丰泽区刺桐路电信大楼四楼测试机房", "ct": "张德汕", "ph": "18904435207", "o": "JSJTSFW-WCZC-20260702-001", "sv": "特殊支持", "pm": "CS5466H3", "q": 3, "cn": "下架发货", "in": "JSJ214277", "sl": "徐哲", "slp": "13910520925", "sd": "20260702", "ed": "20260708", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "齐鲁创新院", "a": "山东省青岛市城阳区新悦路81号数据中心", "ct": "韩增富", "ph": "18215645305", "o": "JSJTSFW-WCZC-TXYJ-20260630-002", "sv": "通信月结", "pm": "PPU", "q": 1, "cn": "安装系统", "in": "JSJ214271", "sl": "王鹏飞", "slp": "18660127276", "sd": "20260701", "ed": "20260707", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "天翼云", "a": "天津市武清区高村科技创新园汇旺道6号", "ct": "张振龙", "ph": "18701129527", "o": "JSJTSFW-WCZC-20260701-001", "sv": "特殊支持", "pm": "CS5998H3", "q": 1, "cn": "上架、改扩配", "in": "JSJ214270", "sl": "徐哲", "slp": "13910520925", "sd": "20260701", "ed": "20260707", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "四川银行", "a": "成都市双流区公兴镇物联一路物联西街交界处（联通中国", "ct": "黄潇", "ph": "13212112009", "o": "CX-SV260001175", "sv": "硬件安装", "pm": "CS5280H3", "q": 158, "cn": "上架初始化", "in": "JSJ214269", "sl": "杨世伦", "slp": "15882207794", "sd": "20260701", "ed": "20260710", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "北京电信", "a": "北京市海淀区永旭北路7号：北京电信数据中心", "ct": "郭鑫", "ph": "18910297203", "o": "CX-SV250048488", "sv": "集成化交付", "pm": "CS5280H3", "q": 1, "cn": "初始化配置核对", "in": "JSJ213570", "sl": "张旭", "slp": "13651092520", "sd": "20260630", "ed": "20260706", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "国网安徽", "a": "安徽省合肥市蜀山区稻香路88号", "ct": "谭文龙", "ph": "17354279640", "o": "CX-SV260009026", "sv": "硬件安装", "pm": "CS5280H2", "q": 85, "cn": "上架初始化", "in": "JSJ214010", "sl": "王杨昆", "slp": "18518966468", "sd": "20260630", "ed": "20260706", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "辽宁铁塔", "a": "辽宁省沈阳市浑南新区沈阳国际软件园B7 辽宁铁塔", "ct": "周宇", "ph": "18600339254", "o": "JSJTSFW-WCZC-TXYJ-20260629-001", "sv": "通信月结", "pm": "CS5280H", "q": 5, "cn": "刷新BMC", "in": "", "sl": "张志纯", "slp": "13301120051", "sd": "20260630", "ed": "20260706", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "", "pc": "", "sr": ""}, {"t": "派单", "y": 2026, "c": "安徽移动", "a": "安徽省合肥市习友路移动数据中心机房", "ct": "付曦", "ph": "18756997945", "o": "CX-SV250049024", "sv": "操作系统+集成化交付", "pm": "CS5280H3", "q": 18, "cn": "二次初始化", "in": "", "sl": "周光如", "slp": "18963797722", "sd": "20260630", "ed": "20260706", "ad": "", "mgr": "", "mgp": "", "st": "待处理", "rm": "补单", "pc": "", "sr": ""}]};
@@ -261,6 +306,18 @@ var FIELDS={
 };
 var PER_PAGE=50;
 var state={};
+var curTab=null;
+var curRow=null;
+var KEY_FIELD={dispatch:'o',monthly:'wo',inspection:'o',duty:'o',batch_qa:'qano',batch_wo:'qano'};
+var KEY_LABEL={dispatch:'单号',monthly:'工单号',inspection:'单号',duty:'单号',batch_qa:'问题单编号',batch_wo:'问题编号'};
+var ISSUE_REPO='DADIAO007/SV-dispatch-dashboard';
+
+function toast(msg){
+  var t=document.getElementById('modalToast');
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){t.style.display='none'},3000);
+}
 
 function sw(btn){
   document.querySelectorAll(".tb").forEach(function(b){b.classList.remove("on")});
@@ -320,19 +377,21 @@ function renderTable(tab){
   document.getElementById("info_"+tab).textContent="共 "+total+" 条，第 "+(total?start+1:0)+"-"+Math.min(start+PER_PAGE,total)+" 条";
   
   var cols=COLS[tab], fields=FIELDS[tab];
-  document.getElementById("tbh_"+tab).innerHTML="<tr>"+cols.map(function(t){return "<th>"+t+"</th>"}).join("")+"</tr>";
+  document.getElementById("tbh_"+tab).innerHTML="<tr>"+cols.map(function(t){return "<th>"+t+"</th>"}).join("")+"<th style='width:40px;text-align:center'>操作</th></tr>";
   
   var html="";
   for(var i=0;i<page.length;i++){
     var r=page[i];
+    var idx=DATA[tab].indexOf(r);
     html+="<tr>";
     for(var j=0;j<fields.length;j++){
       var v=r[fields[j]]||"-";
       html+="<td title='"+v+"'>"+v+"</td>";
     }
+    html+=`<td style='text-align:center'><button class='btn-edit' onclick='openModal("${tab}",${idx})'>✏️</button></td>`;
     html+="</tr>";
   }
-  document.getElementById("tbb_"+tab).innerHTML=html||"<tr><td colspan='"+cols.length+"' style='text-align:center;padding:20px;color:#999'>无匹配记录</td></tr>";
+  document.getElementById("tbb_"+tab).innerHTML=html||"<tr><td colspan='"+(cols.length+1)+"' style='text-align:center;padding:20px;color:#999'>无匹配记录</td></tr>";
   
   var pg="";
   var s2=Math.max(1,s.page-3);
@@ -353,6 +412,82 @@ function goPage(tab,p){
   if(!state[tab]) return;
   state[tab].page=p;
   renderTable(tab);
+}
+
+function openModal(tab,rowIdx){
+  curTab=tab;
+  curRow=(rowIdx!==null&&rowIdx!==undefined)?DATA[tab][rowIdx]:null;
+  var cols=COLS[tab], fields=FIELDS[tab];
+  var title=(curRow?'编辑':'新增')+' - '+({'dispatch':'派单明细','monthly':'通信月结','inspection':'巡检','duty':'值守','batch_qa':'批量问题','batch_wo':'批量工单'})[tab];
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalSubmit').textContent=curRow?'更新 Issue':'创建 Issue';
+  
+  var h='<div class="fg">';
+  for(var j=0;j<fields.length;j++){
+    var f=fields[j], label=cols[j];
+    if(f==='sn') continue;
+    var val=curRow?(curRow[f]!=null?curRow[f]:''):'';
+    val=String(val);
+    var inputType='text';
+    if(f==='cn'||f==='rm'||f==='det'||f==='cause'||f==='sol'||f==='sv') inputType='textarea';
+    var cls=inputType==='textarea'?' full':'';
+    h+='<div class="'+cls.trim()+'"><label>'+label+'</label>';
+    if(inputType==='textarea'){
+      h+='<textarea id="mf_'+f+'" rows="2">'+val+'</textarea>';
+    }else{
+      h+='<input type="text" id="mf_'+f+'" value="'+val.replace(/"/g,'&quot;')+'">';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  document.getElementById('modalBody').innerHTML=h;
+  document.getElementById('editModal').classList.add('on');
+}
+
+function closeModal(){
+  document.getElementById('editModal').classList.remove('on');
+  curTab=null;curRow=null;
+}
+
+function submitIssue(){
+  var tab=curTab;
+  if(!tab) return;
+  var fields=FIELDS[tab];
+  var data={};
+  for(var j=0;j<fields.length;j++){
+    var f=fields[j];
+    if(f==='sn') continue;
+    var el=document.getElementById('mf_'+f);
+    if(el) data[f]=el.value||'';
+  }
+  
+  var keyField=KEY_FIELD[tab];
+  var keyLabel=KEY_LABEL[tab];
+  var keyVal=curRow?(curRow[keyField]||''):'';
+  var action=curRow?'edit':'add';
+  
+  var payload={tab:tab,action:action,data:data};
+  if(action==='edit'&&keyVal) payload.original_key=keyVal;
+  
+  var summary=data['c']||data['name']||data['rec']||'(新记录)';
+  var title=encodeURIComponent('['+({'dispatch':'派单','monthly':'月结','inspection':'巡检','duty':'值守','batch_qa':'问题','batch_wo':'工单'})[tab]+'] '+(action==='edit'?'编辑':'新增')+' - '+summary);
+  var body=encodeURIComponent('```json\n'+JSON.stringify(payload,null,2)+'\n```\n\n> ⚠️ 请勿修改 JSON 内容，直接点击 **Submit new issue** 提交即可。');
+  var url='https://github.com/'+ISSUE_REPO+'/issues/new?title='+title+'&body='+body;
+  
+  // Copy JSON to clipboard
+  var jsonStr=JSON.stringify(payload,null,2);
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(jsonStr).then(function(){
+      toast('✅ JSON数据已复制到剪贴板，Issue已打开');
+    }).catch(function(){
+      toast('📋 Issue已打开，请粘贴JSON数据提交');
+    });
+  }else{
+    toast('📋 Issue已打开，请粘贴JSON数据提交');
+  }
+  
+  window.open(url,'_blank');
+  closeModal();
 }
 if(window._loggedIn) initOverview();
 </script>
