@@ -58,6 +58,28 @@ tr:hover{background:#f8f9ff}
 </style>
 </head>
 <body>
+<script>
+var PASSWORD="Zxk980213@zxy";
+function go(){
+  var v=document.getElementById("pi").value;
+  if(v===PASSWORD){
+    document.getElementById("g").style.display="none";
+    document.getElementById("app").style.display="block";
+    if(typeof initOverview==="function") setTimeout(initOverview,100);
+  }else{
+    var e=document.getElementById("pe");
+    if(e){e.style.display="block";e.textContent="密码错误";}
+  }
+}
+function sw(btn){
+  document.querySelectorAll(".tb").forEach(function(b){b.classList.remove("on")});
+  btn.classList.add("on");
+  document.querySelectorAll(".tabcontent").forEach(function(t){t.classList.remove("on")});
+  var el=document.getElementById(btn.getAttribute("data-tab"));
+  if(el) el.classList.add("on");
+}
+</script>
+
 
 <div id="g">
   <div>
