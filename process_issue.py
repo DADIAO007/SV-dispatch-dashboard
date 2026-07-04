@@ -127,10 +127,10 @@ TAB_CONFIG = {
     },
     'batch_qa': {
         'file_id': BATCH_FILE_ID,
-        'worksheet_id': 1,      # 需要确认实际工作表ID
+        'worksheet_id': 2,      # 批量问题工作表
         'key_col': 4,           # 问题单编号
-        'search_range': (1, 200),
-        'last_row_range': (1, 200),
+        'search_range': (1, 40),
+        'last_row_range': (1, 40),
         'default_last_row': 33,
         'columns': [
             (0, 'sn', ''),
@@ -146,11 +146,11 @@ TAB_CONFIG = {
     },
     'batch_wo': {
         'file_id': BATCH_FILE_ID,
-        'worksheet_id': 2,      # 需要确认实际工作表ID
+        'worksheet_id': 1,      # 批量工单工作表
         'key_col': 8,           # 问题编号
-        'search_range': (1, 200),
-        'last_row_range': (1, 200),
-        'default_last_row': 110,
+        'search_range': (1, 250),
+        'last_row_range': (100, 250),
+        'default_last_row': 223,
         'columns': [
             (0, 'sn', ''),
             (1, 'c', ''),
